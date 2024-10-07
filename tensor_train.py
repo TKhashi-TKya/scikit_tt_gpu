@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 import scikit_tt_gpu.utils as utl
 import time as _time
@@ -121,7 +121,7 @@ class TT(object):
     .. [1] I. V. Oseledets, "Tensor-Train Decomposition", SIAM Journal on Scientific Computing 33 (5), 2011
     .. [2] P. Gelß. "The Tensor-Train Format and Its Applications: Modeling and Analysis of Chemical Reaction
            Networks, Catalytic Processes, Fluid Flows, and Brownian Dynamics", Freie Universität Berlin, 2017
-    
+
     Examples
     --------
     Construct tensor train from list of cores:
@@ -146,11 +146,11 @@ class TT(object):
 
     """
 
-    def __init__(self, x: Union[List[cp.ndarray], cp.ndarray], 
-                 threshold: float=0, 
-                 max_rank:  int=cp.infty, 
-                 progress:  bool=False, 
-                 string:    str=None):
+    def __init__(self, x: Union[List[cp.ndarray], cp.ndarray],
+                 threshold: float = 0,
+                 max_rank:  int = cp.infty,
+                 progress:  bool = False,
+                 string:    str = None):
         """
         Parameters
         ----------
@@ -184,7 +184,8 @@ class TT(object):
                     self.order = len(x)
                     self.row_dims = [x[i].shape[1] for i in range(self.order)]
                     self.col_dims = [x[i].shape[2] for i in range(self.order)]
-                    self.ranks = [x[i].shape[0] for i in range(self.order)] + [x[-1].shape[3]]
+                    self.ranks = [x[i].shape[0]
+                                  for i in range(self.order)] + [x[-1].shape[3]]
                     self.cores = x
 
                     # rank reduction
@@ -197,13 +198,12 @@ class TT(object):
             else:
                 raise ValueError('List elements must be 4-dimensional arrays.')
 
-        # initialize from full array   
+        # initialize from full array
         elif isinstance(x, cp.ndarray):
 
             # check if order of ndarray is a multiple of 2
             if cp.mod(x.ndim, 2) == 0:
 
-                
                 # show progress
                 if string is None:
                     string = 'HOSVD'
@@ -224,7 +224,8 @@ class TT(object):
                 for i in range(order - 1):
                     # reshape residual tensor
                     m = int(ranks[i] * row_dims[i] * col_dims[i])
-                    n = int(cp.prod(row_dims[i + 1:]) * cp.prod(col_dims[i + 1:]))
+                    n = int(cp.prod(row_dims[i + 1:])
+                            * cp.prod(col_dims[i + 1:]))
                     y = cp.reshape(y, [m, n])
 
                     # apply SVD in order to isolate modes
@@ -243,28 +244,34 @@ class TT(object):
 
                     # define new TT core
                     ranks[i + 1] = u.shape[1]
-                    cores.append(cp.reshape(u, [int(ranks[i]), int(row_dims[i]), int(col_dims[i]), int(ranks[i + 1])]))
+                    cores.append(cp.reshape(u, [int(ranks[i]), int(
+                        row_dims[i]), int(col_dims[i]), int(ranks[i + 1])]))
 
                     # set new residual tensor
                     y = cp.diag(s).dot(v)
 
                     # show progress
-                    utl.progress(string, 100 * (i + 1) / order, cpu_time=_time.time() - start_time, show=progress)
+                    utl.progress(string, 100 * (i + 1) / order,
+                                 cpu_time=_time.time() - start_time, show=progress)
 
                 # define last TT core
-                cores.append(cp.reshape(y, [int(ranks[-2]), int(row_dims[-1]), int(col_dims[-1]), 1]))
+                cores.append(cp.reshape(
+                    y, [int(ranks[-2]), int(row_dims[-1]), int(col_dims[-1]), 1]))
 
                 # initialize tensor train
                 self.__init__(cores)
 
                 # show progress
-                utl.progress(string, 100, cpu_time=_time.time() - start_time, show=progress)
+                utl.progress(string, 100, cpu_time=_time.time() -
+                             start_time, show=progress)
 
             else:
-                raise ValueError('Number of dimensions must be a multiple of 2.')
+                raise ValueError(
+                    'Number of dimensions must be a multiple of 2.')
 
         else:
-            raise TypeError('Parameter must be either a list of cores or an ndarray.')
+            raise TypeError(
+                'Parameter must be either a list of cores or an ndarray.')
 
     def __repr__(self):
         """
@@ -310,7 +317,8 @@ class TT(object):
 
                 # define order, ranks, and cores
                 order = self.order
-                ranks = [1] + [self.ranks[i] + tt_add.ranks[i] for i in range(1, order)] + [1]
+                ranks = [1] + [self.ranks[i] + tt_add.ranks[i]
+                               for i in range(1, order)] + [1]
                 cores = []
 
                 # construct cores
@@ -320,10 +328,12 @@ class TT(object):
                         cores.append(
                             cp.zeros([ranks[i], self.row_dims[i], self.col_dims[i], ranks[i + 1]], dtype=complex))
                     else:
-                        cores.append(cp.zeros([ranks[i], self.row_dims[i], self.col_dims[i], ranks[i + 1]]))
+                        cores.append(
+                            cp.zeros([ranks[i], self.row_dims[i], self.col_dims[i], ranks[i + 1]]))
 
                     # insert core of self
-                    cores[i][0:self.ranks[i], :, :, 0:self.ranks[i + 1]] = self.cores[i]
+                    cores[i][0:self.ranks[i], :, :,
+                             0:self.ranks[i + 1]] = self.cores[i]
 
                     # insert core of tt_add
                     r_1 = ranks[i] - tt_add.ranks[i]
@@ -343,7 +353,7 @@ class TT(object):
         else:
             raise TypeError('Unsupported parameter.')
 
-    def __sub__(self, tt_sub: 'TT') -> 'TT': 
+    def __sub__(self, tt_sub: 'TT') -> 'TT':
         """
         Difference of two tensor trains.
 
@@ -452,15 +462,15 @@ class TT(object):
             Returns:
 
                 Product U of cores T and S of shape (r1 * s1 x m x p x r2 * s2)
-                
+
             """
 
             # Prepare cores for matrix multiplication
-            c1_row = cp.arange(core_1.shape[ 0], dtype = cp.intp)[:, None]
-            c1_col = cp.arange(core_1.shape[-1], dtype = cp.intp)[None, :]
+            c1_row = cp.arange(core_1.shape[0], dtype=cp.intp)[:, None]
+            c1_col = cp.arange(core_1.shape[-1], dtype=cp.intp)[None, :]
 
-            c2_row = cp.arange(core_2.shape[ 0], dtype = cp.intp)[:, None]
-            c2_col = cp.arange(core_2.shape[-1], dtype = cp.intp)[None, :]
+            c2_row = cp.arange(core_2.shape[0], dtype=cp.intp)[:, None]
+            c2_col = cp.arange(core_2.shape[-1], dtype=cp.intp)[None, :]
 
             # Index and broadcast accordingly
             core1_broad = core_1[c1_row, :, :, c1_col][:, None, :, None, :, :]
@@ -470,10 +480,10 @@ class TT(object):
 
             reshape_contraction = contraction.reshape(
 
-                    core_1.shape[ 0] * core_2.shape[ 0],
-                    core_1.shape[-1] * core_2.shape[-1],
-                    core_1.shape[ 1], 
-                    core_2.shape[ 2]
+                core_1.shape[0] * core_2.shape[0],
+                core_1.shape[-1] * core_2.shape[-1],
+                core_1.shape[1],
+                core_2.shape[2]
             )
 
             result = reshape_contraction.transpose(0, 2, 3, 1)
@@ -486,7 +496,8 @@ class TT(object):
             if self.col_dims == tt_mul.row_dims:
 
                 # multiply TT cores
-                cores = [core_multiplication(self.cores[i], tt_mul.cores[i]) for i in range(self.order)]
+                cores = [core_multiplication(
+                    self.cores[i], tt_mul.cores[i]) for i in range(self.order)]
 
                 # define product tensor
                 tt_prod = TT(cores)
@@ -523,10 +534,10 @@ class TT(object):
 
         return tt_prod
 
-    def tensordot(self, other: 'TT', 
-                  num_axes: int, 
-                  mode: str='last-first',
-                  overwrite: bool=False) -> 'TT':
+    def tensordot(self, other: 'TT',
+                  num_axes: int,
+                  mode: str = 'last-first',
+                  overwrite: bool = False) -> 'TT':
         """
         Computes index contraction between self and other.
 
@@ -544,7 +555,7 @@ class TT(object):
             location of the axes for contraction on self-other
         overwrite : bool, optional
             whether to overwrite self or not
-            
+
         Returns
         -------
         TT
@@ -611,16 +622,20 @@ class TT(object):
         # check if the needed ranks are 1
         if mode == 'last-first':
             if self.ranks[-1] != 1 or other.ranks[0] != 1:
-                raise ValueError('last rank of self and first rank of other have to be 1')
+                raise ValueError(
+                    'last rank of self and first rank of other have to be 1')
         elif mode == 'last-last':
             if self.ranks[-1] != 1 or other.ranks[-1] != 1:
-                raise ValueError('last rank of self and last rank of other have to be 1')
+                raise ValueError(
+                    'last rank of self and last rank of other have to be 1')
         elif mode == 'first-last':
             if self.ranks[0] != 1 or other.ranks[-1] != 1:
-                raise ValueError('first rank of self and last rank of other have to be 1')
+                raise ValueError(
+                    'first rank of self and last rank of other have to be 1')
         else:  # mode == 'first-first':
             if self.ranks[0] != 1 or other.ranks[0] != 1:
-                raise ValueError('first rank of self and first rank of other have to be 1')
+                raise ValueError(
+                    'first rank of self and first rank of other have to be 1')
 
         # copy self
         if overwrite is False:
@@ -629,14 +644,16 @@ class TT(object):
             tdot = self
 
         # calculate the contraction
-        M = cp.tensordot(self.cores[first_idx_self], other.cores[first_idx_other], axes=([1, 2], [1, 2]))
+        M = cp.tensordot(
+            self.cores[first_idx_self], other.cores[first_idx_other], axes=([1, 2], [1, 2]))
         # M.shape (r_0, r_1, s_0, s_1)
 
         for i in range(1, num_axes):
             M_new = cp.tensordot(self.cores[first_idx_self + i], other.cores[first_idx_other + i],
                                  axes=([1, 2], [1, 2]))
             # M_new.shape (r_{i-1}, r_i, s_{i-1}, s_i)
-            M = cp.tensordot(M, M_new, axes=([1, 3], [0, 2]))  # shape (r_0, s_0, r_i, s_i)
+            # shape (r_0, s_0, r_i, s_i)
+            M = cp.tensordot(M, M_new, axes=([1, 3], [0, 2]))
             M = cp.transpose(M, [0, 2, 1, 3])  # shape (r_0, r_i, s_0, s_i)
 
         if mode == 'last-first':
@@ -655,31 +672,45 @@ class TT(object):
         elif num_axes == self.order:  # complete contraction over self -> merge M into other
             tdot.cores = []
             if mode == 'last-first':
-                tdot.cores.append(cp.tensordot(M, other.cores[last_idx_other + 1], axes=([1], [0])))
-                tdot.cores.extend(other.cores[last_idx_other + 2:])  # append the remaining cores of other
+                tdot.cores.append(cp.tensordot(
+                    M, other.cores[last_idx_other + 1], axes=([1], [0])))
+                # append the remaining cores of other
+                tdot.cores.extend(other.cores[last_idx_other + 2:])
             elif mode == 'last-last':
-                tdot.cores.append(cp.tensordot(other.cores[first_idx_other - 1], M, axes=([3], [1])))
-                tdot.cores.extend(other.cores[:first_idx_other - 1][::-1])  # append the remaining cores of other
+                tdot.cores.append(cp.tensordot(
+                    other.cores[first_idx_other - 1], M, axes=([3], [1])))
+                # append the remaining cores of other
+                tdot.cores.extend(other.cores[:first_idx_other - 1][::-1])
                 for i in range(len(tdot.cores)):  # they need to be rank-transposed
                     tdot.cores[i] = cp.transpose(tdot.cores[i], [3, 1, 2, 0])
             elif mode == 'first-last':
-                tdot.cores.append(cp.tensordot(other.cores[first_idx_other - 1], M, axes=([3], [1])))
-                tdot.cores = other.cores[:first_idx_other - 1] + tdot.cores  # append the remaining cores of other
+                tdot.cores.append(cp.tensordot(
+                    other.cores[first_idx_other - 1], M, axes=([3], [1])))
+                # append the remaining cores of other
+                tdot.cores = other.cores[:first_idx_other - 1] + tdot.cores
             else:  # mode = 'first-first', merge M into last core of other
-                tdot.cores.append(cp.tensordot(M, other.cores[last_idx_other + 1], axes=([1], [0])))
-                tdot.cores = other.cores[last_idx_other + 2:][::-1] + tdot.cores  # append the remaining cores of other
+                tdot.cores.append(cp.tensordot(
+                    M, other.cores[last_idx_other + 1], axes=([1], [0])))
+                # append the remaining cores of other
+                tdot.cores = other.cores[last_idx_other +
+                                         2:][::-1] + tdot.cores
                 for i in range(len(tdot.cores)):  # they need to be rank-transposed
                     tdot.cores[i] = cp.transpose(tdot.cores[i], [3, 1, 2, 0])
 
         else:  # merge M into tdot
             if mode == 'last-first':
-                tdot.cores = self.cores[:first_idx_self] + other.cores[last_idx_other + 1:]
-                tdot.cores[first_idx_self - 1] = cp.tensordot(tdot.cores[first_idx_self - 1], M, axes=([3], [0]))
+                tdot.cores = self.cores[:first_idx_self] + \
+                    other.cores[last_idx_other + 1:]
+                tdot.cores[first_idx_self - 1] = cp.tensordot(
+                    tdot.cores[first_idx_self - 1], M, axes=([3], [0]))
             elif mode == 'last-last':
                 tdot.cores = self.cores[:first_idx_self]
-                tdot.cores[first_idx_self - 1] = cp.tensordot(tdot.cores[first_idx_self - 1], M, axes=([3], [0]))
-                tdot.cores.extend(other.cores[:first_idx_other][::-1])  # append the remaining cores of other
-                for i in range(first_idx_self, len(tdot.cores)):  # they need to be rank-transposed
+                tdot.cores[first_idx_self - 1] = cp.tensordot(
+                    tdot.cores[first_idx_self - 1], M, axes=([3], [0]))
+                # append the remaining cores of other
+                tdot.cores.extend(other.cores[:first_idx_other][::-1])
+                # they need to be rank-transposed
+                for i in range(first_idx_self, len(tdot.cores)):
                     tdot.cores[i] = cp.transpose(tdot.cores[i], [3, 1, 2, 0])
             elif mode == 'first-last':
                 tdot.cores = self.cores[last_idx_self + 1:]
@@ -688,7 +719,8 @@ class TT(object):
             else:  # first-first
                 tdot.cores = self.cores[last_idx_self + 1:]
                 tdot.cores[0] = cp.tensordot(M, tdot.cores[0], axes=([0], [0]))
-                tdot.cores = other.cores[last_idx_other + 1:][::-1] + tdot.cores
+                tdot.cores = other.cores[last_idx_other +
+                                         1:][::-1] + tdot.cores
                 for i in range(other.order - num_axes):  # they need to be rank-transposed
                     tdot.cores[i] = cp.transpose(tdot.cores[i], [3, 1, 2, 0])
 
@@ -696,13 +728,14 @@ class TT(object):
         tdot.order = len(tdot.cores)
         tdot.row_dims = [tdot.cores[i].shape[1] for i in range(tdot.order)]
         tdot.col_dims = [tdot.cores[i].shape[2] for i in range(tdot.order)]
-        tdot.ranks = [tdot.cores[i].shape[0] for i in range(tdot.order)] + [tdot.cores[-1].shape[3]]
+        tdot.ranks = [tdot.cores[i].shape[0]
+                      for i in range(tdot.order)] + [tdot.cores[-1].shape[3]]
 
         return tdot
 
-    def rank_tensordot(self, matrix: cp.ndarray, 
-                       mode: str='last', 
-                       overwrite: bool=False) -> 'TT':
+    def rank_tensordot(self, matrix: cp.ndarray,
+                       mode: str = 'last',
+                       overwrite: bool = False) -> 'TT':
         """
         Return index contraction between self and a 2D-array matrix along the first/last rank axis of the first/last
         core of self. Thus, this method is only useful in the unusual case where self.ranks[0] or self.ranks[-1] != 1.
@@ -734,19 +767,22 @@ class TT(object):
         if mode == 'last':
             if tdot.ranks[-1] != matrix.shape[0]:
                 raise ValueError('dimensions do not match')
-            tdot.cores[-1] = cp.tensordot(tdot.cores[-1], matrix, axes=([3], [0]))
+            tdot.cores[-1] = cp.tensordot(tdot.cores[-1],
+                                          matrix, axes=([3], [0]))
         elif mode == 'first':
             if tdot.ranks[0] != matrix.shape[1]:
                 raise ValueError('dimensions do not match')
-            tdot.cores[0] = cp.tensordot(matrix, tdot.cores[0], axes=([1], [0]))
+            tdot.cores[0] = cp.tensordot(
+                matrix, tdot.cores[0], axes=([1], [0]))
         else:
             raise ValueError('unknown mode')
 
-        tdot.ranks = [tdot.cores[i].shape[0] for i in range(tdot.order)] + [tdot.cores[-1].shape[3]]
+        tdot.ranks = [tdot.cores[i].shape[0]
+                      for i in range(tdot.order)] + [tdot.cores[-1].shape[3]]
         return tdot
 
     def concatenate(self, other: Union['TT', List[cp.ndarray]],
-                    overwrite: bool=False) -> 'TT':
+                    overwrite: bool = False) -> 'TT':
         """
         Expand the list of cores of self by appending more cores.
         If other is a TT, concatenate the cores of self and the cores of other.
@@ -788,14 +824,15 @@ class TT(object):
         tt.order = len(tt.cores)
         tt.row_dims = [tt.cores[i].shape[1] for i in range(tt.order)]
         tt.col_dims = [tt.cores[i].shape[2] for i in range(tt.order)]
-        tt.ranks = [tt.cores[i].shape[0] for i in range(tt.order)] + [tt.cores[-1].shape[3]]
+        tt.ranks = [tt.cores[i].shape[0]
+                    for i in range(tt.order)] + [tt.cores[-1].shape[3]]
 
         return tt
 
-    def transpose(self, 
-                  cores: Optional[List[int]]=None, 
-                  conjugate: bool=False,
-                  overwrite: bool=False) -> 'TT':
+    def transpose(self,
+                  cores: Optional[List[int]] = None,
+                  conjugate: bool = False,
+                  overwrite: bool = False) -> 'TT':
         """
         Transpose of tensor trains.
 
@@ -846,7 +883,8 @@ class TT(object):
 
             if cp.isin(i, cores):
                 # permute second and third dimension of each core
-                tt_transpose.cores[i] = cp.transpose(tt_transpose.cores[i], [0, 2, 1, 3])
+                tt_transpose.cores[i] = cp.transpose(
+                    tt_transpose.cores[i], [0, 2, 1, 3])
 
                 # interchange row and column dimensions
                 row_dim = tt_transpose.row_dims[i]
@@ -859,7 +897,7 @@ class TT(object):
 
         return tt_transpose
 
-    def rank_transpose(self, overwrite: bool=False) -> 'TT':
+    def rank_transpose(self, overwrite: bool = False) -> 'TT':
         """
         Computes the rank-transposed of self.
 
@@ -896,14 +934,15 @@ class TT(object):
 
         tt_transpose.cores.reverse()
         for i in range(len(tt_transpose.cores)):
-            tt_transpose.cores[i] = cp.transpose(tt_transpose.cores[i], [3, 1, 2, 0])
+            tt_transpose.cores[i] = cp.transpose(
+                tt_transpose.cores[i], [3, 1, 2, 0])
         tt_transpose.row_dims.reverse()
         tt_transpose.col_dims.reverse()
         tt_transpose.ranks.reverse()
 
         return tt_transpose
 
-    def conj(self, overwrite: bool=False) -> 'TT':
+    def conj(self, overwrite: bool = False) -> 'TT':
         """
         Complex conjugate of tensor trains.
 
@@ -941,7 +980,8 @@ class TT(object):
         """
 
         # check if all row dimensions or column dimensions of self are equal to 1
-        op_bool = not (all([i == 1 for i in self.row_dims]) or all([i == 1 for i in self.col_dims]))
+        op_bool = not (all([i == 1 for i in self.row_dims])
+                       or all([i == 1 for i in self.col_dims]))
 
         return op_bool
 
@@ -1018,7 +1058,8 @@ class TT(object):
                         raise IndexError('Indices out of range.')
 
                 else:
-                    raise ValueError('Number of indices must be twice the order of the tensor train.')
+                    raise ValueError(
+                        'Number of indices must be twice the order of the tensor train.')
 
             else:
                 raise TypeError('Indices must be integers.')
@@ -1039,7 +1080,8 @@ class TT(object):
             raise ValueError("The first and last rank have to be 1!")
 
         # reshape first core
-        full_tensor = self.cores[0].reshape(self.row_dims[0] * self.col_dims[0], self.ranks[1])
+        full_tensor = self.cores[0].reshape(
+            self.row_dims[0] * self.col_dims[0], self.ranks[1])
 
         for i in range(1, self.order):
             # contract full_tensor with next TT core and reshape
@@ -1053,7 +1095,8 @@ class TT(object):
         p = [None] * 2 * self.order
         p[::2] = self.row_dims
         p[1::2] = self.col_dims
-        q = [2 * i for i in range(self.order)] + [1 + 2 * i for i in range(self.order)]
+        q = [2 * i for i in range(self.order)] + \
+            [1 + 2 * i for i in range(self.order)]
         full_tensor = full_tensor.reshape(p).transpose(q)
 
         return full_tensor
@@ -1071,7 +1114,8 @@ class TT(object):
         """
 
         # reshape first core
-        tt_mat = self.cores[0].reshape(self.row_dims[0], self.col_dims[0], self.ranks[1])
+        tt_mat = self.cores[0].reshape(
+            self.row_dims[0], self.col_dims[0], self.ranks[1])
 
         for i in range(1, self.order):
             # contract tt_mat with next TT core, permute and reshape
@@ -1089,12 +1133,12 @@ class TT(object):
 
         return tt_mat
 
-    def ortho_left(self, start_index: int=0, 
-                   end_index: Optional[int]=None, 
-                   threshold: float=0.0, 
-                   max_rank: int=cp.infty, 
-                   progress: bool=False, 
-                   string: str='Left-orthonormalization') -> 'TT':
+    def ortho_left(self, start_index: int = 0,
+                   end_index: Optional[int] = None,
+                   threshold: float = 0.0,
+                   max_rank: int = cp.infty,
+                   progress: bool = False,
+                   string: str = 'Left-orthonormalization') -> 'TT':
         """
         Left-orthonormalization of tensor trains.
 
@@ -1167,20 +1211,24 @@ class TT(object):
 
                         # define updated rank and core
                         self.ranks[i + 1] = u.shape[1]
-                        self.cores[i] = u.reshape(self.ranks[i], self.row_dims[i], self.col_dims[i], self.ranks[i + 1])
+                        self.cores[i] = u.reshape(
+                            self.ranks[i], self.row_dims[i], self.col_dims[i], self.ranks[i + 1])
 
                         # shift non-orthonormal part to next core
-                        self.cores[i + 1] = cp.tensordot(cp.diag(s).dot(v), self.cores[i + 1], axes=(1, 0))
+                        self.cores[i + 1] = cp.tensordot(
+                            cp.diag(s).dot(v), self.cores[i + 1], axes=(1, 0))
 
                         # show progress
                         utl.progress(string + '... r=' + str(self.ranks[i + 1]),
-                                     100 * (i - start_index + 1) / (end_index - start_index + 1),
+                                     100 * (i - start_index + 1) /
+                                     (end_index - start_index + 1),
                                      cpu_time=_time.time() - start_time, show=progress)
 
                     return self
 
                 else:
-                    raise ValueError('Maximum rank must be a positive integer.')
+                    raise ValueError(
+                        'Maximum rank must be a positive integer.')
 
             else:
                 raise ValueError('Threshold must be greater or equal 0.')
@@ -1188,10 +1236,10 @@ class TT(object):
         else:
             raise TypeError('Start and end indices must be integers.')
 
-    def ortho_right(self, start_index: Optional[int]=None, 
-                    end_index: int=1, 
-                    threshold: float=0, 
-                    max_rank: int=cp.infty) -> 'TT':
+    def ortho_right(self, start_index: Optional[int] = None,
+                    end_index: int = 1,
+                    threshold: float = 0,
+                    max_rank: int = cp.infty) -> 'TT':
         """
         Right-orthonormalization of tensor trains.
 
@@ -1236,8 +1284,8 @@ class TT(object):
                         # apply SVD to ith TT core
                         try:
                             [u, s, v] = cp.linalg.svd(self.cores[i].reshape(self.ranks[i],
-                                                                         self.row_dims[i] * self.col_dims[i] *
-                                                                         self.ranks[i + 1]), full_matrices=False)
+                                                                            self.row_dims[i] * self.col_dims[i] *
+                                                                            self.ranks[i + 1]), full_matrices=False)
                         except:
                             [u, s, v] = linalg.svd(self.cores[i].reshape(self.ranks[i],
                                                                          self.row_dims[i] * self.col_dims[i] *
@@ -1257,11 +1305,13 @@ class TT(object):
 
                         # define updated rank and core
                         self.ranks[i] = v.shape[0]
-                        self.cores[i] = v.reshape(self.ranks[i], self.row_dims[i], self.col_dims[i], self.ranks[i + 1])
+                        self.cores[i] = v.reshape(
+                            self.ranks[i], self.row_dims[i], self.col_dims[i], self.ranks[i + 1])
 
                         # shift non-orthonormal part to previous core
                         self.cores[i - 1] = self.cores[i - 1].reshape(
-                            self.ranks[i - 1] * self.row_dims[i - 1] * self.col_dims[i - 1],
+                            self.ranks[i - 1] * self.row_dims[i -
+                                                              1] * self.col_dims[i - 1],
                             self.cores[i - 1].shape[3]).dot(u).dot(cp.diag(s))
                         self.cores[i - 1] = self.cores[i - 1].reshape(self.ranks[i - 1], self.row_dims[i - 1],
                                                                       self.col_dims[i - 1], self.ranks[i])
@@ -1269,7 +1319,8 @@ class TT(object):
                     return self
 
                 else:
-                    raise ValueError('Maximum rank must be a positive integer.')
+                    raise ValueError(
+                        'Maximum rank must be a positive integer.')
 
             else:
                 raise ValueError('Threshold must be greater or equal 0.')
@@ -1277,7 +1328,7 @@ class TT(object):
         else:
             raise TypeError('Start and end indices must be integers.')
 
-    def ortho(self, threshold: float=0, max_rank: int=cp.infty) -> 'TT':
+    def ortho(self, threshold: float = 0, max_rank: int = cp.infty) -> 'TT':
         """
         Left- and right-orthonormalization of tensor trains.
 
@@ -1317,7 +1368,7 @@ class TT(object):
         else:
             raise ValueError('Threshold must be greater or equal 0.')
 
-    def norm(self, p: int=2) -> float:
+    def norm(self, p: int = 2) -> float:
         """
         Norm of tensor trains.
 
@@ -1415,10 +1466,10 @@ class TT(object):
         else:
             raise ValueError('p must be 1 or 2.')
 
-    def tt2qtt(self, 
-               row_dims: List[List[int]], 
-               col_dims: List[List[int]], 
-               threshold: float=0) -> 'TT':
+    def tt2qtt(self,
+               row_dims: List[List[int]],
+               col_dims: List[List[int]],
+               threshold: float = 0) -> 'TT':
         """
         Conversion from TT format into QTT format.
 
@@ -1476,7 +1527,8 @@ class TT(object):
 
                 # apply SVD in order to split core
                 [u, s, v] = cp.linalg.svd(
-                    core.reshape(rank * row_dims[i][j] * col_dims[i][j], row_dim * col_dim * tt_tensor.ranks[i + 1]),
+                    core.reshape(
+                        rank * row_dims[i][j] * col_dims[i][j], row_dim * col_dim * tt_tensor.ranks[i + 1]),
                     full_matrices=False)
 
                 # rank reduction
@@ -1487,14 +1539,16 @@ class TT(object):
                     v = v[indices, :]
 
                 # define QTT core
-                qtt_cores.append(u.reshape(rank, row_dims[i][j], col_dims[i][j], s.shape[0]))
+                qtt_cores.append(
+                    u.reshape(rank, row_dims[i][j], col_dims[i][j], s.shape[0]))
 
                 # update residual core and rank
                 core = cp.diag(s).dot(v)
                 rank = s.shape[0]
 
             # define last QTT core
-            qtt_cores.append(core.reshape(rank, row_dim, col_dim, tt_tensor.ranks[i + 1]))
+            qtt_cores.append(core.reshape(
+                rank, row_dim, col_dim, tt_tensor.ranks[i + 1]))
 
         # define quantized tensor train
         qtt_tensor = TT(qtt_cores)
@@ -1545,7 +1599,8 @@ class TT(object):
             # begin contractions
             for j in range(k + 1, k + merge_numbers[i]):
                 # contract with next core and reshape
-                core = cp.tensordot(core, qtt_tensor.cores[j], axes=(3, 0)).transpose((0, 1, 3, 2, 4, 5))
+                core = cp.tensordot(core, qtt_tensor.cores[j], axes=(
+                    3, 0)).transpose((0, 1, 3, 2, 4, 5))
                 core = core.reshape((core.shape[0], core.shape[1] * core.shape[2], core.shape[3] * core.shape[4],
                                     core.shape[5]))
 
@@ -1560,13 +1615,13 @@ class TT(object):
 
         return tt_tensor
 
-    def svd(self, 
-            index:     int, 
-            threshold: float=0.0, 
-            max_rank:  int=cp.infty, 
-            ortho_l:   bool=True, 
-            ortho_r:   bool=True, 
-            overwrite: bool=False) -> Tuple['TT', 'TT', 'TT']: 
+    def svd(self,
+            index:     int,
+            threshold: float = 0.0,
+            max_rank:  int = cp.infty,
+            ortho_l:   bool = True,
+            ortho_r:   bool = True,
+            overwrite: bool = False) -> Tuple['TT', 'TT', 'TT']:
         """
         Computation of a global SVD of a tensor train.
         Construct a singular value decomposition of a (non-operator) tensor train t in the form of tensor networks u, s,
@@ -1611,11 +1666,13 @@ class TT(object):
 
         # left-orthonormalize cores 0 to index-2
         if ortho_l is True:
-            t = t.ortho_left(end_index=index - 2, threshold=threshold, max_rank=max_rank)
+            t = t.ortho_left(end_index=index - 2,
+                             threshold=threshold, max_rank=max_rank)
 
         # right-orthonormalize cores index to order -1
         if ortho_r is True:
-            t = t.ortho_right(end_index=index, threshold=threshold, max_rank=max_rank)
+            t = t.ortho_right(
+                end_index=index, threshold=threshold, max_rank=max_rank)
 
         # decompose (index-1)th core
         [u, s, v] = linalg.svd(t.cores[index - 1].reshape(t.ranks[index - 1] * t.row_dims[index - 1], t.ranks[index]),
@@ -1636,7 +1693,8 @@ class TT(object):
         t.ranks[index] = u.shape[1]
 
         # update (index-1)th core
-        t.cores[index - 1] = u.reshape(t.ranks[index - 1], t.row_dims[index - 1], 1, t.ranks[index])
+        t.cores[index - 1] = u.reshape(t.ranks[index - 1],
+                                       t.row_dims[index - 1], 1, t.ranks[index])
 
         # update (index)th core
         t.cores[index] = cp.tensordot(v, t.cores[index], axes=(1, 0))
@@ -1647,12 +1705,12 @@ class TT(object):
 
         return u, s, v
 
-    def pinv(self, 
-             index:     int, 
-             threshold: float=0.0, 
-             ortho_l:   bool=True,
-             ortho_r:   bool=True,
-             overwrite: bool=False) -> 'TT':
+    def pinv(self,
+             index:     int,
+             threshold: float = 0.0,
+             ortho_l:   bool = True,
+             ortho_r:   bool = True,
+             overwrite: bool = False) -> 'TT':
         """
         Computation of the pseudoinverse of a tensor train.
 
@@ -1689,19 +1747,21 @@ class TT(object):
         """
 
         # compute gloabl SVD of self
-        u, s, v = TT.svd(self, index, threshold=threshold, ortho_l=ortho_l, ortho_r=ortho_r, overwrite=overwrite)
+        u, s, v = TT.svd(self, index, threshold=threshold,
+                         ortho_l=ortho_l, ortho_r=ortho_r, overwrite=overwrite)
 
         # define core list
         cores = u.cores + v.cores
 
         # contract s with (index)th core
-        cores[index] = cp.tensordot(cp.diag(cp.reciprocal(s)), cores[index], axes=(1, 0))
+        cores[index] = cp.tensordot(
+            cp.diag(cp.reciprocal(s)), cores[index], axes=(1, 0))
 
         # define tensor train
         p_inv = TT(cores)
 
         return p_inv
-    
+
     def diag(self, t: 'TT', diag_list: List) -> 'TT':
         """
         Construction of diagonal MPO from MPS.
@@ -1723,16 +1783,16 @@ class TT(object):
 
         for i in diag_list:
             r1, d, _, r2 = cores[i].shape
-            core_diag = cp.zeros([r1,d,d,r2], dtype=complex)
+            core_diag = cp.zeros([r1, d, d, r2], dtype=complex)
             for k in range(r1):
                 for l in range(r2):
-                    core_diag[k,:,:,l] = cp.diag(cp.squeeze(cores[i][k,:,0,l]))
+                    core_diag[k, :, :, l] = cp.diag(
+                        cp.squeeze(cores[i][k, :, 0, l]))
             cores[i] = core_diag
 
         t_diag = TT(cores)
 
         return t_diag
-    
 
     def squeeze(self) -> 'TT':
         """
@@ -1769,17 +1829,18 @@ class TT(object):
 
         # if first cores have row and column dimension equal to 1,
         # contract from the left with first relevant core
-        if mode_list[0]>0:
-            core_tmp = self.cores[0][0,0,0,:][None,:]
-            for i in range(1,mode_list[0]):
-                core_tmp = core_tmp@self.cores[i][:,0,0,:]
-            self.cores[mode_list[0]] = cp.tensordot(core_tmp, self.cores[mode_list[0]], axes=(1,0))
+        if mode_list[0] > 0:
+            core_tmp = self.cores[0][0, 0, 0, :][None, :]
+            for i in range(1, mode_list[0]):
+                core_tmp = core_tmp@self.cores[i][:, 0, 0, :]
+            self.cores[mode_list[0]] = cp.tensordot(
+                core_tmp, self.cores[mode_list[0]], axes=(1, 0))
 
         # contract cores with row and column dimension with relevant cores from the right
         for i in range(len(mode_list)-1):
             core_tmp = self.cores[mode_list[i]]
-            for j in range(mode_list[i]+1,mode_list[i+1]):
-                core_tmp = core_tmp@self.cores[j][:,0,0,:]
+            for j in range(mode_list[i]+1, mode_list[i+1]):
+                core_tmp = core_tmp@self.cores[j][:, 0, 0, :]
             cores.append(core_tmp)
 
         # construct squeezed TT decomposition
@@ -1791,7 +1852,7 @@ class TT(object):
 # construction of specific tensor-train decompositions
 # ----------------------------------------------------
 
-def zeros(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]]=1) -> 'TT':
+def zeros(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]] = 1) -> 'TT':
     """
     Tensor train filled with zeros.
 
@@ -1815,7 +1876,8 @@ def zeros(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]]
         ranks = [1] + [ranks for _ in range(len(row_dims) - 1)] + [1]
 
     # define TT cores of tt_zeros
-    cores = [cp.zeros([ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]) for i in range(len(row_dims))]
+    cores = [cp.zeros([ranks[i], row_dims[i], col_dims[i], ranks[i + 1]])
+             for i in range(len(row_dims))]
 
     # define tensor train
     tt_zeros = TT(cores)
@@ -1823,7 +1885,7 @@ def zeros(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]]
     return tt_zeros
 
 
-def ones(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]]=1) -> 'TT':
+def ones(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]] = 1) -> 'TT':
     """
     Tensor train filled with ones.
 
@@ -1847,7 +1909,8 @@ def ones(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]]=
         ranks = [1] + [ranks for _ in range(len(row_dims) - 1)] + [1]
 
     # define TT cores of tt_ones
-    cores = [cp.ones([ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]) for i in range(len(row_dims))]
+    cores = [cp.ones([ranks[i], row_dims[i], col_dims[i], ranks[i + 1]])
+             for i in range(len(row_dims))]
 
     # define tensor train
     tt_ones = TT(cores)
@@ -1906,7 +1969,7 @@ def unit(dims: List[int], inds: List[int]) -> 'TT':
     return t
 
 
-def rand(row_dims : List[int], col_dims: List[int], ranks: Union[int, List[int]]=1) -> 'TT':
+def rand(row_dims: List[int], col_dims: List[int], ranks: Union[int, List[int]] = 1) -> 'TT':
     """
     Random tensor train.
 
@@ -1930,7 +1993,8 @@ def rand(row_dims : List[int], col_dims: List[int], ranks: Union[int, List[int]]
         ranks = [1] + [ranks for _ in range(len(row_dims) - 1)] + [1]
 
     # define TT cores of tt_rand
-    cores = [cp.random.rand(ranks[i], row_dims[i], col_dims[i], ranks[i + 1]) for i in range(len(row_dims))]
+    cores = [cp.random.rand(ranks[i], row_dims[i], col_dims[i], ranks[i + 1])
+             for i in range(len(row_dims))]
 
     # define tensor train
     tt_rand = TT(cores)
@@ -1962,14 +2026,17 @@ def canonical(row_dims: List[int], max_rank: int) -> 'TT':
     # define cores from the left
     r_tmp_left = 1
     for i in range(order // 2):
-        cores[i] = cp.eye(r_tmp_left * row_dims[i], cp.amin([r_tmp_left * row_dims[i], max_rank]))
-        cores[i] = cores[i].reshape((r_tmp_left, row_dims[i], 1, cp.amin([r_tmp_left * row_dims[i], max_rank])))
+        cores[i] = cp.eye(r_tmp_left * row_dims[i],
+                          cp.amin([r_tmp_left * row_dims[i], max_rank]))
+        cores[i] = cores[i].reshape(
+            (r_tmp_left, row_dims[i], 1, cp.amin([r_tmp_left * row_dims[i], max_rank])))
         r_tmp_left = cp.amin([r_tmp_left * row_dims[i], max_rank])
 
     # define cores from the right
     r_tmp_right = 1
     for i in range(order // 2):
-        cores[-i - 1] = cp.eye(cp.amin([r_tmp_right * row_dims[-i-1], max_rank]), row_dims[-i-1] * r_tmp_right)
+        cores[-i - 1] = cp.eye(cp.amin([r_tmp_right * row_dims[-i-1],
+                               max_rank]), row_dims[-i-1] * r_tmp_right)
         cores[-i - 1] = cores[-i - 1].reshape(
             [cp.amin([r_tmp_right * row_dims[-i-1], max_rank]), row_dims[-i-1], 1, r_tmp_right])
         r_tmp_right = cp.amin([r_tmp_right * row_dims[-i-1], max_rank])
@@ -1985,7 +2052,7 @@ def canonical(row_dims: List[int], max_rank: int) -> 'TT':
     return tt_canonical
 
 
-def uniform(row_dims: List[int], ranks: Union[int, List[int]]=1, norm: float=1) -> 'TT':
+def uniform(row_dims: List[int], ranks: Union[int, List[int]] = 1, norm: float = 1) -> 'TT':
     """
     Uniformly distributed tensor train.
 
@@ -2009,10 +2076,12 @@ def uniform(row_dims: List[int], ranks: Union[int, List[int]]=1, norm: float=1) 
         ranks = [1] + [ranks for _ in range(len(row_dims) - 1)] + [1]
 
     # compute factor for each core such that tt_uni has given norm
-    factor = (norm / (cp.sqrt(cp.prod(row_dims)) * cp.prod(ranks))) ** cp.true_divide(1, len(row_dims))
+    factor = (norm / (cp.sqrt(cp.prod(row_dims)) * cp.prod(ranks))
+              ) ** cp.true_divide(1, len(row_dims))
 
     # define TT cores of tt_uni
-    cores = [factor * cp.ones([ranks[i], row_dims[i], 1, ranks[i + 1]]) for i in range(len(row_dims))]
+    cores = [factor * cp.ones([ranks[i], row_dims[i], 1, ranks[i + 1]])
+             for i in range(len(row_dims))]
 
     # define tensor train
     tt_uni = TT(cores)
@@ -2041,35 +2110,40 @@ def residual_error(operator: 'TT', lhs: 'TT', rhs: 'TT') -> float:
     """
 
     for i in range(operator.order):
-        Ax = cp.tensordot(operator.cores[i], lhs.cores[i], axes=(2,1)).transpose([0, 3, 1, 4, 2, 5]).reshape([operator.ranks[i]*lhs.ranks[i], operator.row_dims[i], operator.ranks[i+1]*lhs.ranks[i+1]])
+        Ax = cp.tensordot(operator.cores[i], lhs.cores[i], axes=(2, 1)).transpose([0, 3, 1, 4, 2, 5]).reshape(
+            [operator.ranks[i]*lhs.ranks[i], operator.row_dims[i], operator.ranks[i+1]*lhs.ranks[i+1]])
         b = rhs.cores[i].reshape(rhs.ranks[i], rhs.row_dims[i], rhs.ranks[i+1])
         if i == 0:
             core = cp.append(Ax, -b, axis=2)
-            [u, s, v] = linalg.svd(core.reshape([core.shape[0]*core.shape[1], core.shape[2]]), full_matrices=False, overwrite_a=True, check_finite=False, lapack_driver='gesvd')
+            [u, s, v] = linalg.svd(core.reshape([core.shape[0]*core.shape[1], core.shape[2]]),
+                                   full_matrices=False, overwrite_a=True, check_finite=False, lapack_driver='gesvd')
             M = cp.diag(s).dot(v)
         elif i == (operator.order - 1):
             core = cp.append(Ax, b, axis=0)
-            core = cp.tensordot(M, core, axes=(1,0))
+            core = cp.tensordot(M, core, axes=(1, 0))
             error = cp.linalg.norm(core.flatten())
         else:
-            core_1 = cp.append(Ax, cp.zeros([Ax.shape[0], Ax.shape[1], b.shape[2]]), axis=2)
-            core_2 = cp.append(cp.zeros([b.shape[0], b.shape[1], Ax.shape[2]]), b, axis=2)
+            core_1 = cp.append(Ax, cp.zeros(
+                [Ax.shape[0], Ax.shape[1], b.shape[2]]), axis=2)
+            core_2 = cp.append(
+                cp.zeros([b.shape[0], b.shape[1], Ax.shape[2]]), b, axis=2)
             core = cp.append(core_1, core_2, axis=0)
-            core = cp.tensordot(M, core, axes=(1,0))
-            [u, s, v] = linalg.svd(core.reshape([core.shape[0]*core.shape[1], core.shape[2]]), full_matrices=False, overwrite_a=True, check_finite=False, lapack_driver='gesvd')
+            core = cp.tensordot(M, core, axes=(1, 0))
+            [u, s, v] = linalg.svd(core.reshape([core.shape[0]*core.shape[1], core.shape[2]]),
+                                   full_matrices=False, overwrite_a=True, check_finite=False, lapack_driver='gesvd')
             M = cp.diag(s).dot(v)
 
     return float(error)
 
-def build_core_vector(matrix_list: List[Union[cp.ndarray, int]], field_type: str = "float"):
 
+def build_core_vector(matrix_list: List[Union[cp.ndarray, int]], field_type: str = "float"):
     """
     Handles case (2) of possible icputs in build_core.
     """
 
     r1 = len(matrix_list)
 
-    m, n = (0,0)
+    m, n = (0, 0)
 
     for i in range(r1):
 
@@ -2077,20 +2151,22 @@ def build_core_vector(matrix_list: List[Union[cp.ndarray, int]], field_type: str
 
             try:
 
-                m, n = matrix_list[i].shape # Determine matrix order
+                m, n = matrix_list[i].shape  # Determine matrix order
 
-            except ValueError: # Check that we do not consider other n-dimensional arrays.
+            # Check that we do not consider other n-dimensional arrays.
+            except ValueError:
 
-                print("List has a non-two-dimensional array. Lists must contain matrices.\n")
+                print(
+                    "List has a non-two-dimensional array. Lists must contain matrices.\n")
 
                 raise
 
-            break # Stop once order of matrix (mxn) is determined.
+            break  # Stop once order of matrix (mxn) is determined.
 
-    core = cp.zeros((r1, m, n, 1), dtype = field_type) 
+    core = cp.zeros((r1, m, n, 1), dtype=field_type)
 
     for i in range(r1):
-        
+
         if isinstance(matrix_list[i], cp.ndarray):
 
             if field_type == "complex":
@@ -2103,13 +2179,14 @@ def build_core_vector(matrix_list: List[Union[cp.ndarray, int]], field_type: str
 
                     core = core.astype("complex")
 
-            try: 
+            try:
 
                 core[i, :, :, 0] = matrix_list[i]
 
             except ValueError:
 
-                print("\n", matrix_list[i], "\ndoes not have the same order as other matrices in the list. All matrices in the list must have the same order.\n")
+                print(
+                    "\n", matrix_list[i], "\ndoes not have the same order as other matrices in the list. All matrices in the list must have the same order.\n")
 
                 raise
 
@@ -2119,8 +2196,8 @@ def build_core_vector(matrix_list: List[Union[cp.ndarray, int]], field_type: str
 
     return core
 
-def build_core(matrix_list: Union[ List[List[Union[cp.ndarray, int]]], List[Union[cp.ndarray, int]] ], iscomplex: bool = False):
 
+def build_core(matrix_list: Union[List[List[Union[cp.ndarray, int]]], List[Union[cp.ndarray, int]]], iscomplex: bool = False):
     """
     Given a list of length r1 of list elements containing each containing 
     (mxn)-matrices, return an order (r1 x m x n x r2)-tensor-train core.
@@ -2149,7 +2226,7 @@ def build_core(matrix_list: Union[ List[List[Union[cp.ndarray, int]]], List[Unio
 
         r2 = len(matrix_list[0])
 
-        m, n = (0,0)
+        m, n = (0, 0)
 
         for i in range(r1):
 
@@ -2159,9 +2236,10 @@ def build_core(matrix_list: Union[ List[List[Union[cp.ndarray, int]]], List[Unio
 
                     list_element = matrix_list[i][j]
 
-                except IndexError: 
+                except IndexError:
 
-                    print("Index out of range. All lists must contain the same number of matrices.\n")
+                    print(
+                        "Index out of range. All lists must contain the same number of matrices.\n")
 
                     raise
 
@@ -2173,18 +2251,19 @@ def build_core(matrix_list: Union[ List[List[Union[cp.ndarray, int]]], List[Unio
 
                     except ValueError:
 
-                        print("List has a non-two-dimensional array. Lists must contain matrices.\n")
+                        print(
+                            "List has a non-two-dimensional array. Lists must contain matrices.\n")
 
                         raise
 
-
-        core = cp.zeros((r1, m, n, r2), dtype = field_type)
+        core = cp.zeros((r1, m, n, r2), dtype=field_type)
 
         for i in range(r1):
 
             if r2 != len(matrix_list[i]):
 
-                raise ValueError("All lists must contain the same number of matrices.\n")
+                raise ValueError(
+                    "All lists must contain the same number of matrices.\n")
 
             r2 = len(matrix_list[i])
 
@@ -2204,28 +2283,31 @@ def build_core(matrix_list: Union[ List[List[Union[cp.ndarray, int]]], List[Unio
 
                             core = core.astype("complex")
 
-                    try: 
-                        
+                    try:
+
                         core[i, :, :, j] = matrix_list_element
 
                     except TypeError:
 
-                        print("\n", matrix_list_element, "\nis not a 2-dimensional array. Inner lists must contain matrices.\n")
+                        print("\n", matrix_list_element,
+                              "\nis not a 2-dimensional array. Inner lists must contain matrices.\n")
 
                         raise
 
                     except ValueError:
 
-                        print("\n",matrix_list_element, "\ndoes not have the same order as other matrices in the list. All matrices in the list must have the same order.\n")
+                        print("\n", matrix_list_element,
+                              "\ndoes not have the same order as other matrices in the list. All matrices in the list must have the same order.\n")
 
                         raise
 
-                elif matrix_list_element == 0: # Core is already zero initialized with zeros.
+                elif matrix_list_element == 0:  # Core is already zero initialized with zeros.
 
                     continue
 
                 else:
 
-                    raise TypeError("Parameters in list must be either an 0 or a matrix.\n")
+                    raise TypeError(
+                        "Parameters in list must be either an 0 or a matrix.\n")
 
         return core
