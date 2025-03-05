@@ -507,6 +507,9 @@ def __update_core_als(i: int,
     if solver == 'lu':
         lu = lin.lu_factor(micro_op, overwrite_a=True, check_finite=False)
         solution.cores[i] = lin.lu_solve(lu, micro_rhs, trans=0, overwrite_b=True, check_finite=False)
+    if solver == 'pinv':
+        pinv_micro_op = cp.linalg.pinv(micro_op)
+        solution.cores[i] = pinv_micro_op @ micro_rhs
 
     # reshape solution and orthonormalization
     # ---------------------------------------
@@ -596,6 +599,11 @@ def __update_core_mals(i: int,
     if solver == 'lu':
         lu = lin.lu_factor(micro_op, overwrite_a=True, check_finite=False)
         solution.cores[i] = lin.lu_solve(lu, micro_rhs, trans=0, overwrite_b=True, check_finite=False)
+
+    # if solver='pinv'
+    if solver == 'pinv':
+        pinv_micro_op = cp.linalg.pinv(micro_op)
+        solution.cores[i] = pinv_micro_op @ micro_rhs
 
     # reshape solution and orthonormalization
     # ---------------------------------------
