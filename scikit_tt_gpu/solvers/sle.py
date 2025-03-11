@@ -602,7 +602,7 @@ def __update_core_mals(i: int,
 
     # if solver='pinv'
     if solver == 'pinv':
-        pinv_micro_op = cp.linalg.pinv(micro_op)
+        pinv_micro_op = cp.linalg.pinv(micro_op, threshold)
         solution.cores[i] = pinv_micro_op @ micro_rhs
 
     # reshape solution and orthonormalization

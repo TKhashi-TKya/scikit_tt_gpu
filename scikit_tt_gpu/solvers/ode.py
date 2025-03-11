@@ -94,7 +94,7 @@ def errors_expl_euler(operator: 'TT', solution: List['TT'], step_sizes: List[flo
         approximate solution of the linear differential equation
 
     step_sizes : list[float]
-        step sizes for the application of the implicit Euler method
+        step sizes for the application of the explicit Euler method
 
     Returns
     -------
@@ -112,6 +112,113 @@ def errors_expl_euler(operator: 'TT', solution: List['TT'], step_sizes: List[flo
             solution[i].norm())
 
     return errors
+
+
+def runge_kutta(operator: 'TT', 
+                initial_value: 'TT',
+                step_sizes: List[float], 
+                threshold: float=1e-12,
+                max_rank: int=50,
+                normalize: int=1,
+                progress: bool=True) -> List['TT']:
+    """
+    Explicit Runge-Kutta method for linear differential equations in the TT format.
+
+    Parameters
+    ----------
+    operator : TT
+        TT operator of the differential equation
+
+    initial_value : TT
+        initial value of the differential equation
+
+    step_sizes : list[float]
+        step sizes for the application of the implicit Runge-Kutta method
+
+    threshold : float, optional
+        threshold for reduced SVD decompositions, default is 1e-12
+
+    max_rank : int, optional
+        maximum rank of the solution, default is 50
+
+    normalize : {0, 1, 2}, optional
+        no normalization if 0, otherwise the solution is normalized in terms of Manhattan or Euclidean norm in each step
+
+    progress : bool, optional
+        whether to show the progress of the algorithm or not, default is True
+
+    Returns
+    -------
+    list[TT]
+        numerical solution of the differential equation
+    """
+
+    # return current time
+    start_time = utl.progress('Running Runge-Kutta method', 0, show=progress)
+
+    # define solution
+    solution = [initial_value]
+
+    # begin explicit Euler method
+    # ---------------------------
+
+    for i in range(len(step_sizes)):
+        # compute next time step
+        tt_tmp1 = operator.dot(solution[i])
+        tt_tmp2 = operator.dot(solution[i] + step_sizes[i] / 2 * tt_tmp1)
+        tt_tmp3 = operator.dot(solution[i] + step_sizes[i] / 2 * tt_tmp2)
+        tt_tmp4 = operator.dot(solution[i] + step_sizes[i] * tt_tmp3)
+        tt_tmp = solution[i] + step_sizes[i] / 6 * (tt_tmp1 + 2 * tt_tmp2 + 2 * tt_tmp3 + tt_tmp4)
+
+        # truncate ranks of the solution
+        tt_tmp = tt_tmp.ortho(threshold=threshold, max_rank=max_rank)
+
+        # normalize solution
+        if normalize > 0:
+            tt_tmp = ((1 / tt_tmp.norm(p=normalize))) * tt_tmp
+
+        # append solution
+        solution.append(tt_tmp.copy())
+
+        # print progress
+        utl.progress('Running Runge-Kutta method', 100 * (i + 1) / len(step_sizes), show=progress,
+                     cpu_time=_time.time() - start_time)
+
+    return solution
+
+
+def errors_runge_kutta(operator: 'TT', solution: List['TT'], step_sizes: List[float]) -> List[float]:
+    """
+    Compute approximation errors of the Runge-Kutta method.
+
+    Parameters
+    ----------
+    operator : TT
+        TT operator of the differential equation
+
+    solution : list[TT]
+        approximate solution of the linear differential equation
+
+    step_sizes : list[float]
+        step sizes for the application of the Runge-Kutta method
+
+    Returns
+    -------
+    list[float]
+        approximation errors
+    """
+
+    # define errors
+    errors = []
+
+    # compute relative approximation errors
+    for i in range(len(solution) - 1):
+        errors.append(
+            (solution[i + 1] - (tt.eye(operator.row_dims) + step_sizes[i] * operator).dot(solution[i])).norm() /
+            solution[i].norm())
+
+    return errors
+
 
 def hod(operator: 'TT', 
         initial_value: 'TT',
