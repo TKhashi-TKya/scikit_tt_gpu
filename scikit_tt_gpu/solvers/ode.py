@@ -1,6 +1,7 @@
 import cupy as cp
 import cupyx.scipy as sp
 import cupyx.scipy.linalg as lin
+import math
 
 from typing import List, Union
 
@@ -116,7 +117,8 @@ def errors_expl_euler(operator: 'TT', solution: List['TT'], step_sizes: List[flo
 
 def runge_kutta(operator: 'TT', 
                 initial_value: 'TT',
-                step_sizes: List[float], 
+                step_sizes: List[float],
+                order: int=4,
                 threshold: float=1e-12,
                 max_rank: int=50,
                 normalize: int=1,
@@ -156,19 +158,23 @@ def runge_kutta(operator: 'TT',
     # return current time
     start_time = utl.progress('Running Runge-Kutta method', 0, show=progress)
 
+    # compute Runge-Kutta operator
+    rk_operator = tt.eye(operator.row_dims)
+    for o in range(1, order):
+        rk_operator = rk_operator + step_sizes[0]**o/math.factorial(o)*operator**o
+
+    # truncate ranks of the Runge-Kutta operator
+    rk_operator = rk_operator.ortho(threshold=threshold, max_rank=max_rank)
+
     # define solution
     solution = [initial_value]
 
-    # begin explicit Euler method
+    # begin Runge-Kutta method
     # ---------------------------
 
     for i in range(len(step_sizes)):
         # compute next time step
-        tt_tmp1 = operator.dot(solution[i])
-        tt_tmp2 = operator.dot(solution[i] + step_sizes[i] / 2 * tt_tmp1)
-        tt_tmp3 = operator.dot(solution[i] + step_sizes[i] / 2 * tt_tmp2)
-        tt_tmp4 = operator.dot(solution[i] + step_sizes[i] * tt_tmp3)
-        tt_tmp = solution[i] + step_sizes[i] / 6 * (tt_tmp1 + 2 * tt_tmp2 + 2 * tt_tmp3 + tt_tmp4)
+        tt_tmp = rk_operator.dot(solution[i])
 
         # truncate ranks of the solution
         tt_tmp = tt_tmp.ortho(threshold=threshold, max_rank=max_rank)

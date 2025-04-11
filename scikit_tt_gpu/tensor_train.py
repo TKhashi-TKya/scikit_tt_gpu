@@ -534,6 +534,35 @@ class TT(object):
 
         return tt_prod
 
+    def __pow__(self, pint: 'TT') -> 'TT':
+        """
+        Tensor trains to the power of scalars.
+
+        Parameters
+        ----------
+        pint : int
+            positive integer for the power
+
+        Returns
+        -------
+        tt_pow
+            power of self
+
+        Raises
+        ------
+        TypeError
+            if pint is not positive
+        """
+
+        if isinstance(pint, int) and pint > 0:
+            tt_pow = self
+            for _ in range(1, pint):
+                tt_pow = tt_pow @ self
+
+            return tt_pow
+        else:
+            raise TypeError('Exponent must be positive integer.')
+
     def tensordot(self, other: 'TT',
                   num_axes: int,
                   mode: str = 'last-first',
